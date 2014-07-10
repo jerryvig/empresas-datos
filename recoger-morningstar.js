@@ -44,6 +44,7 @@ fs.unlink(outFileName, function(err) {
 
 			$.getJSON('http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html', params, function(data) {
 				//console.log( 'DATA.RESULT = ' + data.result );
+				console.log('TICKER = ' + ticker);
 
 				jsdom.env(data.result,
 					['http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js'],
@@ -53,7 +54,6 @@ fs.unlink(outFileName, function(err) {
 							if (i > 0 && i < 7 ) {
 								var revenue = window.jQuery(this).text().trim();
 								if (revenue !== 'null') {
-									console.log(revIdx + ',' + ticker + ',' + revenue);
 									fs.appendFile(outFileName, revIdx + ',' + ticker + ',' + revenue + '\n', function(){
 										//Callback for file append.
 									});
