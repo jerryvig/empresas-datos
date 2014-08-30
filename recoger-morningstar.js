@@ -1,134 +1,39 @@
 // http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html?&t=XNYS:GPS&region=usa&culture=en-US&cur=USD&reportType=is&period=12&dataType=A&order=asc&columnYear=5&rounding=3&view=raw&r=645954&callback=jsonp1404943419679
 var $ = require('jQuery'),
 	fs = require('fs'),
-	jsdom = require('jsdom'),
-	tickerList = [
-		'AAPL',
-		'ADBE',
-		'ADI',
-		'ADP',
-		'ADSK',
-		'AKAM',
-		'ALTR',
-		'ALXN',
-		'AMAT',
-		'AMGN',
-		'AMZN',
-		'ATVI',
-		'AVGO',
-		'BBBY',
-		'BIDU',
-		'BIIB',
-		'BRCM',
-		'CA',
-		'CELG',
-		'CERN',
-		'CHKP',
-		'CHRW',
-		'CHTR',
-		'CMCSA',
-		'COST',
-		'CSCO',
-		'CTRX',
-		'CTSH',
-		'CTXS',
-		'DISCA',
-		'DISH',
-		'DLTR',
-		'DTV',
-		'EBAY',
-		'EQIX',
-		'ESRX',
-		'EXPD',
-		'EXPE',
-		'FAST',
-		'FB',
-		'FFIV',
-		'FISV',
-		'FOXA',
-		'GILD',
-		'GMCR',
-		'GOOG',
-		'GRMN',
-		'HSIC',
-		'ILMN',
-		'INTC',
-		'INTU',
-		'ISRG',
-		'KLAC',
-		'KRFT',
-		'LBTYA',
-		'LINTA',
-		'LLTC',
-		'LMCA',
-		'MAR',
-		'MAT',
-		'MDLZ',
-		'MNST',
-		'MSFT',
-		'MU',
-		'MXIM',
-		'MYL',
-		'NFLX',
-		'NTAP',
-		'NVDA',
-		'NXPI',
-		'ORLY',
-		'PAYX',
-		'PCAR',
-		'PCLN',
-		'QCOM',
-		'REGN',
-		'ROST',
-		'SBAC',
-		'SBUX',
-		'SIAL',
-		'SIRI',
-		'SNDK',
-		'SPLS',
-		'SRCL',
-		'STX',
-		'SYMC',
-		'TRIP',
-		'TSCO',
-		'TSLA',
-		'TXN',
-		'VIAB',
-		'VIP',
-		'VOD',
-		'VRSK',
-		'VRTX',
-		'WDC',
-		'WFM',
-		'WYNN',
-		'XLNX'
-	],
-	outFileName = 'revenueData.csv';
+	jsdom = require('jsdom');
 
-fs.unlink(outFileName, function(err) {
-	if (err) throw err;
+const TICKER_LIST_FILE = 'NDX.csv', 
+	OUTPUT_FILE_NAME = 'revenueData.csv',
+	TIME_INTERVAL = 1000;
 
-	tickerList.forEach(function(ticker, idx) {
-		setTimeout(function(){
-			var params = {
-				t: 'XNAS:' + ticker,
-				region: 'usa',
-				culture: 'en-US',
-				cur: 'USD',
-				reportType: 'is',
-				period: '12',
-				dataType: 'A',
-				order: 'asc',
-				columnYear: '5',
-				rounding: '3',
-				view: 'raw',
-			};
+fs.readFile(TICKER_LIST_FILE, function(err, data) {
+	var tickerList = (new String(data)).split('\n');
 
-			$.getJSON('http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html', params, function(data) {
-				//console.log( 'DATA.RESULT = ' + data.result );
-				console.log('TICKER = ' + ticker);
+	fs.unlink(OUTPUT_FILE_NAME, function(err) {
+		if (err) throw err;
 
-				jsdom.env(data.result,
+		tickerList.forEach(function(ticker, idx) {
+			setTimeout(function(){
+				var params = {
+					t: 'XNAS:' + ticker,
+					region: 'usa',
+					culture: 'en-US',
+					cur: 'USD',
+					reportType: 'is',
+					period: '12',
+					dataType: 'A',
+					order: 'asc',
+					columnYear: '5',
+					rounding: '3',
+					view: 'raw',
+				};
+
+				$.getJSON('http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html', params, function(data) {
+					//console.log( 'DATA.RESULT = ' + data.result );
+					console.log('TICKER = ' + ticker);
+
+					jsdom.env(data.result,
 					['http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js'],
 					function(errors, window) {
 						var revIdx = 0;
@@ -136,7 +41,7 @@ fs.unlink(outFileName, function(err) {
 							if (i > 0 && i < 7 ) {
 								var revenue = window.jQuery(this).text().trim();
 								if (revenue !== 'null') {
-									fs.appendFile(outFileName, revIdx + ',' + ticker + ',' + revenue + '\n', function(){
+									fs.appendFile(OUTPUT_FILE_NAME, revIdx + ',' + ticker + ',' + revenue + '\n', function(){
 										//Callback for file append.
 									});
 									revIdx++;
@@ -144,8 +49,9 @@ fs.unlink(outFileName, function(err) {
 							}
 						});
 					}
-				);
-			});
-		}, 1000*idx);
+					);
+				});
+			}, TIME_INTERVAL*idx);
+		});
 	});
 });
