@@ -1,9 +1,16 @@
 // http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html?&t=XNYS:GPS&region=usa&culture=en-US&cur=USD&reportType=is&period=12&dataType=A&order=asc&columnYear=5&rounding=3&view=raw&r=645954&callback=jsonp1404943419679
+'use strict';
+
+//WE WANT TO MOVE THIS TO USE CLOSURE TOOLS.
+var goog = require('closure').Closure();
+
 var $ = require('jQuery'),
 	fs = require('fs'),
 	jsdom = require('jsdom');
 
-const TICKER_LIST_FILE = 'NDX.csv', 
+goog.require('goog.net.XhrIo');
+
+var TICKER_LIST_FILE = 'NDX.csv', 
 	OUTPUT_FILE_NAME = 'revenueData.csv',
 	MORNINGSTAR_BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html',
 	TIME_INTERVAL = 1200;
@@ -41,7 +48,7 @@ fs.readFile(TICKER_LIST_FILE, function(err, data) {
 								if (i > 0 && i < 7 ) {
 									var revenue = window.jQuery(this).text().trim();
 									if (revenue !== 'null') {
-										fs.appendFile(OUTPUT_FILE_NAME, revIdx + ',' + ticker + ',' + revenue + '\n', function(){
+										fs.appendFile(OUTPUT_FILE_NAME, revIdx + ',' + ticker + ',' + revenue + '\n', function() {
 											//Callback for file append.
 										});
 										revIdx++;
