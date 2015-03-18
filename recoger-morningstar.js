@@ -12,7 +12,7 @@ goog.require('goog.Uri');
 
 var RecogerMorningstar = function() {
 	this.TICKER_LIST_FILE = 'NDX.csv';
-	this.OUTPUT_FILE_NAME = './revenueData.csv';
+	this.OUTPUT_FILE_NAME = 'revenueData.csv';
 	this.MORNINGSTAR_BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html';
 	this.TIME_INTERVAL = 1200;
 };
@@ -24,7 +24,13 @@ RecogerMorningstar.prototype.init = function() {
 RecogerMorningstar.prototype.OnTickerListLoaded = function(err, data) {
 	this.tickerList = (new String(data)).split('\n');
 	console.log('output_file_name = ' + this.OUTPUT_FILE_NAME);
-	fs.unlink(this.OUTPUT_FILE_NAME, goog.bind(this.LoopTickerList, this));
+	fs.exists(this.OUTPUT_FILE_NAME, goog.bind(function(exists) {
+		if (exists) {
+			fs.unlink(this.OUTPUT_FILE_NAME, goog.bind(this.LoopTickerList, this));
+		} else {
+			this.LoopTickerList();
+		}
+	}, this));
 };
 
 RecogerMorningstar.prototype.LoopTickerList = function(err) {
@@ -36,7 +42,6 @@ RecogerMorningstar.prototype.LoopTickerList = function(err) {
 };
 
 RecogerMorningstar.prototype.SendRequest = function(ticker) {
-	console.log('SENDING THE REQUEST');
 	var queryParams = {
 		t: 'XNAS:' + ticker,
 		region: 'usa',
@@ -54,13 +59,32 @@ RecogerMorningstar.prototype.SendRequest = function(ticker) {
 		uri.setParameterValue(key, queryParams[key]);
 	}
 
-	goog.net.XhrIo.send(uri, goog.bind(this.HandleResponse, this));
+	goog.net.XhrIo.send(uri, goog.bind(this.HandleResponse, this, ticker));
 };
 
-RecogerMorningstar.prototype.HandleResponse = function(e) {
-	//console.log('TICKER = ' + ticker);
+RecogerMorningstar.prototype.HandleResponse = function(ticker, e) {
+	console.log('TICKER = ' + ticker);
 	var data = e.target.getResponseJson();
-	console.log('data = ' + data.result);
+	var OUTPUT_FILE_NAME = this.OUTPUT_FILE_NAME;
+	//console.log('data = ' + data.result);
+
+	jsdom.env(data.result,
+		['http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js'],
+		function(errors, window) {
+			var revIdx = 0;
+			window.jQuery('div').each(function(i) {
+				if (i > 0 && i < 7 ) {
+					var revenue = window.jQuery(this).text().trim();
+					if (revenue !== 'null') {
+						fs.appendFile(OUTPUT_FILE_NAME, revIdx + ',' + ticker + ',' + revenue + '\n', function() {
+							//Callback for file append.
+						});
+						revIdx++;
+					}
+				}
+			});
+		}
+	);
 };
 
 var collector = new RecogerMorningstar();
