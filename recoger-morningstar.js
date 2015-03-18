@@ -64,31 +64,24 @@ RecogerMorningstar.prototype.SendRequest = function(ticker) {
 
 RecogerMorningstar.prototype.HandleResponse = function(ticker, e) {
 	console.log('TICKER = ' + ticker);
-	var data = e.target.getResponseJson();
-	var OUTPUT_FILE_NAME = this.OUTPUT_FILE_NAME;
-	//console.log('data = ' + data.result);
+	var nextBlock = e.target.getResponseJson().result;
+	var revIdx = 0;
 
-	jsdom.env(data.result,
-		['http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js'],
-		function(errors, window) {
-			var revIdx = 0;
-			window.jQuery('div').each(function(i) {
-				if (i > 0 && i < 7 ) {
-					var revenue = window.jQuery(this).text().trim();
-					if (revenue !== 'null') {
-						fs.appendFile(OUTPUT_FILE_NAME, revIdx + ',' + ticker + ',' + revenue + '\n', function() {
-							//Callback for file append.
-						});
-						revIdx++;
-					}
-				}
-			});
+	for (var i=0; i<6; i++) {
+		var divIdx1 = nextBlock.indexOf('<div>');
+		var block2 = nextBlock.substring(divIdx1+5);
+		var endDivIdx = block2.indexOf('</div>');
+		var revenue = block2.substring(0, endDivIdx);
+		if (revenue != 'null') {
+			fs.appendFile(this.OUTPUT_FILE_NAME, revIdx + ',' + ticker + ',' + revenue + '\n', function() {});
+			revIdx++;
 		}
-	);
+		nextBlock = block2.substring(endDivIdx+6);
+	}
 };
 
-var collector = new RecogerMorningstar();
-collector.init();
+var recogedor = new RecogerMorningstar();
+recogedor.init();
 
 /*
 fs.readFile(TICKER_LIST_FILE, function(err, data) {
