@@ -3,7 +3,7 @@
 
 var goog = require('closure').Closure(),
 	fs = require('fs');
-XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest
+XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
 goog.require('goog.net.XhrIo');
 goog.require('goog.Uri');
