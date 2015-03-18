@@ -2,8 +2,7 @@
 //'use strict';
 
 var goog = require('closure').Closure(),
-	fs = require('fs'),
-	jsdom = require('jsdom');
+	fs = require('fs');
 XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest
 
 goog.require('goog.net.XhrIo');
