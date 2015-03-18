@@ -1,6 +1,4 @@
 // http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html?&t=XNYS:GPS&region=usa&culture=en-US&cur=USD&reportType=is&period=12&dataType=A&order=asc&columnYear=5&rounding=3&view=raw&r=645954&callback=jsonp1404943419679
-//'use strict';
-
 var goog = require('closure').Closure(),
 	fs = require('fs');
 XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
