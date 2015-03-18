@@ -1,20 +1,72 @@
 // http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html?&t=XNYS:GPS&region=usa&culture=en-US&cur=USD&reportType=is&period=12&dataType=A&order=asc&columnYear=5&rounding=3&view=raw&r=645954&callback=jsonp1404943419679
-'use strict';
+//'use strict';
 
 //WE WANT TO MOVE THIS TO USE CLOSURE TOOLS.
-var goog = require('closure').Closure();
-
-var $ = require('jQuery'),
+var goog = require('closure').Closure(),
 	fs = require('fs'),
 	jsdom = require('jsdom');
+XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest
 
 goog.require('goog.net.XhrIo');
+goog.require('goog.Uri');
 
-var TICKER_LIST_FILE = 'NDX.csv', 
-	OUTPUT_FILE_NAME = 'revenueData.csv',
-	MORNINGSTAR_BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html',
-	TIME_INTERVAL = 1200;
+var RecogerMorningstar = function() {
+	this.TICKER_LIST_FILE = 'NDX.csv';
+	this.OUTPUT_FILE_NAME = './revenueData.csv';
+	this.MORNINGSTAR_BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html';
+	this.TIME_INTERVAL = 1200;
+};
 
+RecogerMorningstar.prototype.init = function() {
+	fs.readFile(this.TICKER_LIST_FILE, goog.bind(this.OnTickerListLoaded, this));
+};
+
+RecogerMorningstar.prototype.OnTickerListLoaded = function(err, data) {
+	this.tickerList = (new String(data)).split('\n');
+	console.log('output_file_name = ' + this.OUTPUT_FILE_NAME);
+	fs.unlink(this.OUTPUT_FILE_NAME, goog.bind(this.LoopTickerList, this));
+};
+
+RecogerMorningstar.prototype.LoopTickerList = function(err) {
+	if (err) throw err;
+
+	this.tickerList.forEach(goog.bind(function(ticker, idx) {
+		setTimeout(goog.bind(this.SendRequest, this, ticker), this.TIME_INTERVAL*idx);
+	}, this));
+};
+
+RecogerMorningstar.prototype.SendRequest = function(ticker) {
+	console.log('SENDING THE REQUEST');
+	var queryParams = {
+		t: 'XNAS:' + ticker,
+		region: 'usa',
+		culture: 'en-US',
+		reportType: 'is',
+		period: '12',
+		dataType: 'A',
+		order: 'asc',
+		columnYear: '5',
+		rounding: '3',
+		view: 'raw',
+	};
+	var uri = new goog.Uri(this.MORNINGSTAR_BASE_URL);
+	for (var key in queryParams) {
+		uri.setParameterValue(key, queryParams[key]);
+	}
+
+	goog.net.XhrIo.send(uri, goog.bind(this.HandleResponse, this));
+};
+
+RecogerMorningstar.prototype.HandleResponse = function(e) {
+	//console.log('TICKER = ' + ticker);
+	var data = e.target.getResponseJson();
+	console.log('data = ' + data.result);
+};
+
+var collector = new RecogerMorningstar();
+collector.init();
+
+/*
 fs.readFile(TICKER_LIST_FILE, function(err, data) {
 	var tickerList = (new String(data)).split('\n');
 
@@ -23,7 +75,7 @@ fs.readFile(TICKER_LIST_FILE, function(err, data) {
 
 		tickerList.forEach(function(ticker, idx) {
 			setTimeout(function(){
-				var params = {
+				var queryParams = {
 					t: 'XNAS:' + ticker,
 					region: 'usa',
 					culture: 'en-US',
@@ -35,11 +87,16 @@ fs.readFile(TICKER_LIST_FILE, function(err, data) {
 					rounding: '3',
 					view: 'raw',
 				};
+				var uri = new goog.Uri(MORNINGSTAR_BASE_URL);
+				for (var key in queryParams) {
+					uri.setParameterValue(key, queryParams[key]);
+				}
 
-				$.getJSON(MORNINGSTAR_BASE_URL, params, function(data) {
+				//$.getJSON(MORNINGSTAR_BASE_URL, params, function(data) {
+				goog.net.XhrIo.send(uri, function(e) {
 					// console.log( 'DATA.RESULT = ' + data.result );
 					console.log('TICKER = ' + ticker);
-
+					var data = e.target.getResponseJson();
 					jsdom.env(data.result,
 						['http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js'],
 						function(errors, window) {
@@ -61,4 +118,4 @@ fs.readFile(TICKER_LIST_FILE, function(err, data) {
 			}, TIME_INTERVAL*idx);
 		});
 	});
-});
+}); */
