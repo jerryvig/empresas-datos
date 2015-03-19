@@ -11,6 +11,7 @@ var RecogerMorningstar = function() {
 	this.OUTPUT_FILE_NAME = 'revenueData.csv';
 	this.MORNINGSTAR_BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html';
 	this.TIME_INTERVAL = 1200;
+	this.DATA_ROWS = [];
 };
 
 RecogerMorningstar.prototype.init = function() {
@@ -69,11 +70,26 @@ RecogerMorningstar.prototype.HandleResponse = function(ticker, e) {
 		var endDivIdx = block2.indexOf('</div>');
 		var revenue = block2.substring(0, endDivIdx);
 		if (revenue != 'null') {
-			fs.appendFile(this.OUTPUT_FILE_NAME, revIdx + ',' + ticker + ',' + revenue + '\n', function() {});
+			//fs.appendFile(this.OUTPUT_FILE_NAME, revIdx + ',' + ticker + ',' + revenue + '\n', function() {});
+			this.DATA_ROWS.push({
+				revIdx: revIdx,
+				ticker: ticker,
+				revenue: revenue
+			});
 			revIdx++;
 		}
 		nextBlock = block2.substring(endDivIdx+6);
 	}
+
+	if (ticker === this.tickerList[this.tickerList.length-1]) {
+		this.WriteDataRows();
+	}
+};
+
+RecogerMorningstar.prototype.WriteDataRows = function() {
+	fs.writeFile(this.OUTPUT_FILE_NAME, JSON.stringify(this.DATA_ROWS), function(){
+		console.log('WROTE DATA ROWS OBJECT OUT TO THE FILE');
+	});
 };
 
 var recogedor = new RecogerMorningstar();
