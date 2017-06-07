@@ -81,7 +81,7 @@ function getNextTicker(tickers) {
 }
 
 function main(args) {
-	var tickers = ['AAPL', 'GOOGL', 'MSFT', 'FB', 'AMZN', 'NFLX', 'TSLA', 'TWTR', 'BABA', 'BIDU', 'PYPL', 'SPLK', 'SQ', 'CRM', 'TWLO', 'BOX'];
+	var tickers = ['AAPL', 'GOOGL', 'MSFT', 'FB', 'AMZN', 'NFLX', 'TSLA', 'TWTR', 'BABA', 'BIDU', 'PYPL', 'SPLK', 'SQ', 'CRM', 'TWLO', 'BOX', 'CVNA'];
 	getNextTicker(tickers);
 }
 
