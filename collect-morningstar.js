@@ -21,9 +21,9 @@ ResultParser.prototype.onopentag = function(name, attrs) {
 		if (attrs.class === 'year' && YEARS.indexOf(attrs.id) !== -1) {
 			this.currentYear = attrs.id;
 		}
-		if (attrs.class === 'pos' && YEARS.indexOf(attrs.id) !== -1 && attrs.rawvalue !== undefined) {
+		if (attrs.class === 'pos' && YEARS.indexOf(attrs.id) !== -1 && attrs.rawvalue !== undefined &&
+			attrs.style === 'overflow:hidden;white-space: nowrap;') {
 			if (this.yearIndex < 6) {
-				//console.log(attrs.rawvalue);
 				this.revenueByYear[attrs.id] = attrs.rawvalue;
 			}
 			this.yearIndex++;
