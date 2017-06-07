@@ -7,6 +7,7 @@ const YEARS = ['Y_1', 'Y_2', 'Y_3', 'Y_4', 'Y_5', 'Y_6'];
 function getNewHtmlParser() {
 	var currentYear = null;
 	var years = {};
+	var revIdx = 0;
 	var parser = new htmlparser.Parser({
 		onopentag: function(name, attrs) {
 			if (name === 'div') {
@@ -14,7 +15,10 @@ function getNewHtmlParser() {
 					currentYear = attrs.id;
 				}
 				if (attrs.class === 'pos' && YEARS.indexOf(attrs.id) !== -1 && attrs.rawvalue !== undefined) {
-					console.log(attrs.rawvalue);
+					if (revIdx < 6) {
+						console.log(attrs.rawvalue);
+					}
+					revIdx++;
 				}
 			}
 		},
@@ -64,7 +68,6 @@ function getNextTicker(tickers) {
 		});
 
 		res.on('end', () => {
-			//console.log(rawData);
 			try {
 				var parsedData = JSON.parse(rawData);
 				if (parsedData.result !== undefined) {
