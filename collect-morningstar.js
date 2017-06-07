@@ -1,5 +1,6 @@
 const http = require('http');
 const htmlparser = require('htmlparser2');
+
 const BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html?&t='
 const THROTTLE_DELAY = 1500;
 const YEARS = ['Y_1', 'Y_2', 'Y_3', 'Y_4', 'Y_5', 'Y_6'];
