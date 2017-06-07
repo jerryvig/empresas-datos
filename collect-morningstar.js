@@ -4,57 +4,61 @@ const BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.
 const THROTTLE_DELAY = 1500;
 const YEARS = ['Y_1', 'Y_2', 'Y_3', 'Y_4', 'Y_5', 'Y_6'];
 
-function getNewHtmlParser() {
-	var currentYear = null;
-	var years = {};
-	var revIdx = 0;
-	var parser = new htmlparser.Parser({
-		onopentag: function(name, attrs) {
-			if (name === 'div') {
-				if (attrs.class === 'year' && YEARS.indexOf(attrs.id) !== -1) {
-					currentYear = attrs.id;
-				}
-				if (attrs.class === 'pos' && YEARS.indexOf(attrs.id) !== -1 && attrs.rawvalue !== undefined) {
-					if (revIdx < 6) {
-						console.log(attrs.rawvalue);
-					}
-					revIdx++;
-				}
-			}
-		},
-		ontext: function(text) {
-			if (currentYear !== null) {
-				//console.log(currentYear + ' = ' + text);
-				years[currentYear] = text.trim();
-			}
-		},
-		onclosetag: function(name) {
-			if (name === 'div') {
-				currentYear = null;
-			}
-		}
+function ResultParser() {
+	this.currentYear = null;
+	this.years = {};
+	this.revenueByYear = {};
+	this.yearIndex = 0;
+	this.parser = new htmlparser.Parser({
+		onopentag: this.onopentag.bind(this),
+		ontext: this.ontext.bind(this),
+		onclosetag: this.onclosetag.bind(this)
 	}, {decodeEntities: true});
-	return {
-		'parser': parser,
-		'years': years
-	};
 }
 
+ResultParser.prototype.onopentag = function(name, attrs) {
+	if (name === 'div') {
+		if (attrs.class === 'year' && YEARS.indexOf(attrs.id) !== -1) {
+			this.currentYear = attrs.id;
+		}
+		if (attrs.class === 'pos' && YEARS.indexOf(attrs.id) !== -1 && attrs.rawvalue !== undefined) {
+			if (this.yearIndex < 6) {
+				//console.log(attrs.rawvalue);
+				this.revenueByYear[attrs.id] = attrs.rawvalue;
+			}
+			this.yearIndex++;
+		}
+	}
+};
+
+ResultParser.prototype.ontext = function(text) {
+	if (this.currentYear !== null) {
+		this.years[this.currentYear] = text.trim();
+	}
+};
+
+ResultParser.prototype.onclosetag = function(name) {
+	if (name === 'div') {
+		this.currentYear = null;
+	}
+};
+
 function processResult(result) {
-	var p = getNewHtmlParser();
+	var p = new ResultParser();
 	p.parser.write(result);
 	p.parser.end();
 	console.log(JSON.stringify(p.years));
+	console.log(JSON.stringify(p.revenueByYear));
 }
 
 function getNextTicker(tickers) {
 	var nextTicker = tickers.pop();
 	if (typeof nextTicker === 'undefined') {
-		console.log('Finished retrieiving data for all tickers.');
+		console.log('Finished retrieiving morningstar data for all tickers.');
 		return;
 	}
 
-	console.log(`Retrieving data for ticker ${nextTicker}.`);
+	console.log(`Retrieving morningstar data for ticker ${nextTicker}.`);
 	http.get(BASE_URL + nextTicker, (res) => {
 		if (res.statusCode !== 200) {
 			console.log(`Error: Server reponded with status code ${res.statusCode}`);
@@ -77,7 +81,7 @@ function getNextTicker(tickers) {
 				}
 			} catch (error) {
 				console.log(`Error thrown when parsing JSON: ${error.message}.`);
-			}
+			} 
 			setTimeout(getNextTicker, THROTTLE_DELAY, tickers);
 		});
 	});
