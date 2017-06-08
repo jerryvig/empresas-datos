@@ -49,19 +49,20 @@ ResultParser.prototype.onclosetag = function(name) {
 };
 
 function processResult(result) {
-	var p = new ResultParser();
-	p.parser.write(result);
-	p.parser.end();
+	var rp = new ResultParser();
+	rp.parser.write(result);
+	rp.parser.end();
+	console.log(JSON.stringify(rp.years));
 
 	var db = new sqlite3.Database(DB_FILE_NAME);
-	db.all('SELECT * FROM names ORDER BY name', (err, rows) => {
-		rows.forEach((row) => {
-			console.log(`name = ${row.name}`);
-		});
+	var stmt = db.prepare('INSERT INTO years VALUES (?, ?, ?)');
+	for (var year_index in rp.years) {
+		stmt.run('AAPL', year_index, rp.years[year_index]);
+	}
+	stmt.finalize(() => {
 		db.close();
 	});
-	console.log(JSON.stringify(p.years));
-	console.log(JSON.stringify(p.revenueByYear));
+	console.log(JSON.stringify(rp.revenueByYear));
 }
 
 function handleResponseEnd(tickers) {
