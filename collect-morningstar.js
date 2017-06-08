@@ -168,25 +168,26 @@ TickerListLoader.prototype.getNextExchange = function() {
 	});
 };
 
-function getDbRunPromise(db, stmt) {
-	return new Promise((resolve, reject) => {
-		db.run(stmt, resolve);
-	});
-}
-
 function initializeDatabase() {
+	var ddl_statments = [
+		'DROP TABLE IF EXISTS years',
+		'DROP TABLE IF EXISTS revenue',
+		'CREATE TABLE years ( ticker TEXT, year_index TEXT, year TEXT )',
+		'CREATE TABLE revenue ( ticker TEXT, year_index TEXT, revenue INTEGER )'
+	];
 	var db = new sqlite3.Database(DB_FILE_NAME);
 	return new Promise((resolve, reject) => {
-		getDbRunPromise(db, 'DROP TABLE IF EXISTS years').then(() => {
-			return getDbRunPromise(db, 'DROP TABLE IF EXISTS revenue');
-		}).then(() => {
-			return getDbRunPromise(db, 'CREATE TABLE years ( ticker TEXT, year_index TEXT, year TEXT )');
-		}).then(() => {
-			return getDbRunPromise(db, 'CREATE TABLE revenue ( ticker TEXT, year_index TEXT, revenue INTEGER )');
-		}).then(() => {
-			db.close();
-			resolve();
-		});
+		function runNextStatment() {
+			var nextStmt = ddl_statments.shift();
+			if (nextStmt === undefined) {
+				db.close();
+				console.log('Finished executing schema drop and creation statements.');
+				resolve();
+				return;
+			}
+			db.run(nextStmt, runNextStatment);
+		}
+		runNextStatment();
 	});
 }
 
