@@ -151,7 +151,7 @@ TickerListLoader.prototype.getNextExchange = function() {
 
 	var nextExchange = this.exchanges.shift();
 	if (nextExchange === undefined) {
-		console.log('Finished loading ticker lists from all exchanges.');
+		console.log('Finished loading ticker lists for all exchanges.');
 		console.log(`Final tickerList =  ${JSON.stringify(this.tickerList)}`);
 		this.callback(this.tickerList);
 		return;
