@@ -1,7 +1,8 @@
 const http = require('http');
 const htmlparser = require('htmlparser2');
 
-const BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html?&t='
+const MORNINGSTAR_BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html?&t='
+const NASDAQ_TICKERS_URL = 'http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nasdaq&render=download'
 const THROTTLE_DELAY = 1500;
 const YEARS = ['Y_1', 'Y_2', 'Y_3', 'Y_4', 'Y_5', 'Y_6'];
 
@@ -90,12 +91,45 @@ function getNextTicker(tickers) {
 	}
 
 	console.log(`Retrieving morningstar data for ticker ${nextTicker}.`);
-	http.get(BASE_URL + nextTicker, (response) => handleMorningstarResponse(response, tickers));
+	http.get(MORNINGSTAR_BASE_URL + nextTicker, (response) => handleMorningstarResponse(response, tickers));
+}
+
+function getTickerListFromNasdaq(callback) {
+	http.get(NASDAQ_TICKERS_URL, (response) => {
+		var rawData = '';
+		var tickerList = [];
+
+		if (response.statusCode !== 200) {
+			console.log(`Error: Nasdaq server responded with status code ${response.statusCode}`);
+			return;
+		}
+
+		response.on('data', (chunk) => {
+			rawData += chunk;
+		})
+
+		response.on('end', () => {
+			var lines = rawData.split('\n');
+			for (var line of lines) {
+				var cols = line.split(',');
+				var ticker = cols[0].replace(/"/g, '').trim();
+				if (ticker) {
+					tickerList.push(ticker);
+				}
+			}
+			callback(tickerList);
+		});
+	});
 }
 
 function main(args) {
-	var tickers = ['AAPL', 'GOOGL', 'MSFT', 'FB', 'AMZN', 'NFLX', 'TSLA', 'TWTR', 'BABA', 'BIDU', 'PYPL', 'SPLK', 'SQ', 'CRM', 'TWLO', 'BOX', 'CVNA'];
-	getNextTicker(tickers);
+	// var tickers = ['AAPL', 'GOOGL', 'MSFT', 'FB', 'AMZN', 'NFLX', 'TSLA', 'TWTR', 'BABA', 'BIDU', 'PYPL', 'SPLK', 'SQ', 'CRM', 'TWLO', 'BOX', 'CVNA'];
+	// getNextTicker(tickers);
+	getTickerListFromNasdaq((tickers) =>{
+		for (var t of tickers) {
+			console.log(t);
+		}
+	});
 }
 
 const args = process.argv;
