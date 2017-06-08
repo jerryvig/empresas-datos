@@ -58,6 +58,7 @@ function processResult(result) {
 		rows.forEach((row) => {
 			console.log(`name = ${row.name}`);
 		});
+		db.close();
 	});
 	console.log(JSON.stringify(p.years));
 	console.log(JSON.stringify(p.revenueByYear));
