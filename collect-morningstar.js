@@ -171,20 +171,22 @@ TickerListLoader.prototype.getNextExchange = function() {
 function getDbRunPromise(db, stmt) {
 	return new Promise((resolve, reject) => {
 		db.run(stmt, resolve);
-	})
+	});
 }
 
-function initializeDatabase(callback) {
+function initializeDatabase() {
 	var db = new sqlite3.Database(DB_FILE_NAME);
-	getDbRunPromise(db, 'DROP TABLE IF EXISTS years').then(() => {
-		return getDbRunPromise(db, 'DROP TABLE IF EXISTS revenue');
-	}).then(() => {
-		return getDbRunPromise(db, 'CREATE TABLE years ( ticker TEXT, year_index TEXT, year TEXT )');
-	}).then(() => {
-		return getDbRunPromise(db, 'CREATE TABLE revenue ( ticker TEXT, year_index TEXT, revenue INTEGER )');
-	}).then(() => {
-		db.close();
-		callback();
+	return new Promise((resolve, reject) => {
+		getDbRunPromise(db, 'DROP TABLE IF EXISTS years').then(() => {
+			return getDbRunPromise(db, 'DROP TABLE IF EXISTS revenue');
+		}).then(() => {
+			return getDbRunPromise(db, 'CREATE TABLE years ( ticker TEXT, year_index TEXT, year TEXT )');
+		}).then(() => {
+			return getDbRunPromise(db, 'CREATE TABLE revenue ( ticker TEXT, year_index TEXT, revenue INTEGER )');
+		}).then(() => {
+			db.close();
+			resolve();
+		});
 	});
 }
 
@@ -194,7 +196,7 @@ function loadTickerLists() {
 }
 
 function main(args) {
-	initializeDatabase(loadTickerLists);
+	initializeDatabase().then(loadTickerLists);
 }
 
 const args = process.argv;
