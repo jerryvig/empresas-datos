@@ -1,6 +1,7 @@
 const http = require('http');
 const htmlparser = require('htmlparser2');
 const sqlite3 = require('sqlite3').verbose();
+const util = require('util');
 
 const MORNINGSTAR_BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html?&t='
 const NASDAQ_TICKERS_URL = 'http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&render=download&exchange='
@@ -167,17 +168,23 @@ TickerListLoader.prototype.getNextExchange = function() {
 	});
 };
 
+function getDbRunPromise(db, stmt) {
+	return new Promise((resolve, reject) => {
+		db.run(stmt, resolve);
+	})
+}
+
 function initializeDatabase(callback) {
 	var db = new sqlite3.Database(DB_FILE_NAME);
-	db.run('DROP TABLE IF EXISTS years', () => {
-		db.run('DROP TABLE IF EXISTS revenue', () => {
-			db.run('CREATE TABLE years ( ticker TEXT, year_index TEXT, year TEXT )', () => {
-				db.run('CREATE TABLE revenue ( ticker TEXT, year_index TEXT, revenue INTEGER )', () => {
-					db.close();
-					callback();
-				});
-			});
-		});
+	getDbRunPromise(db, 'DROP TABLE IF EXISTS years').then(() => {
+		return getDbRunPromise(db, 'DROP TABLE IF EXISTS revenue');
+	}).then(() => {
+		return getDbRunPromise(db, 'CREATE TABLE years ( ticker TEXT, year_index TEXT, year TEXT )');
+	}).then(() => {
+		return getDbRunPromise(db, 'CREATE TABLE revenue ( ticker TEXT, year_index TEXT, revenue INTEGER )');
+	}).then(() => {
+		db.close();
+		callback();
 	});
 }
 
