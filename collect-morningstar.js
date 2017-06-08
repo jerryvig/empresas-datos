@@ -230,7 +230,10 @@ function loadTickerLists() {
 function main(args) {
 	initializeDatabase()
 		.then(loadTickerLists)
-		.then(loadMorningstarData);
+		.then(loadMorningstarData)
+		.then(() => {
+			console.log('Finished loading morningstar data.');
+		});
 }
 
 const args = process.argv;
