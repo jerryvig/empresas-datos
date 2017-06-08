@@ -48,14 +48,20 @@ ResultParser.prototype.onclosetag = function(name) {
 	}
 };
 
-function insertResultData(currentTicker, years) {
+function insertResultData(currentTicker, years, revenueByYear) {
 	var db = new sqlite3.Database(DB_FILE_NAME);
-	var stmt = db.prepare('INSERT INTO years VALUES (?, ?, ?)');
-	for (var year_index in years) {
-		stmt.run(currentTicker, year_index, years[year_index]);
+	var year_stmt = db.prepare('INSERT INTO years VALUES (?, ?, ?)');
+	var revenue_stmt = db.prepare('INSERT INTO revenue VALUES (?, ?, ?)');
+	for (var yearIndex in years) {
+		year_stmt.run(currentTicker, yearIndex, years[yearIndex]);
 	}
-	stmt.finalize(() => {
-		db.close();
+	year_stmt.finalize(() => {
+		for (var yearIndex in revenueByYear) {
+			revenue_stmt.run(currentTicker, yearIndex, revenueByYear[yearIndex])
+		}
+		revenue_stmt.finalize(() => {
+			db.close();
+		});
 	});
 }
 
@@ -66,7 +72,7 @@ function processResult(result, currentTicker) {
 	console.log(JSON.stringify(rp.years));
 	console.log(JSON.stringify(rp.revenueByYear));
 
-	insertResultData(currentTicker, rp.years);
+	insertResultData(currentTicker, rp.years, rp.revenueByYear);
 }
 
 function handleResponseEnd(currentTicker, tickers) {
@@ -161,9 +167,27 @@ TickerListLoader.prototype.getNextExchange = function() {
 	});
 };
 
-function main(args) {
+function initializeDatabase(callback) {
+	var db = new sqlite3.Database(DB_FILE_NAME);
+	db.run('DROP TABLE IF EXISTS years', () => {
+		db.run('DROP TABLE IF EXISTS revenue', () => {
+			db.run('CREATE TABLE years ( ticker TEXT, year_index TEXT, year TEXT )', () => {
+				db.run('CREATE TABLE revenue ( ticker TEXT, year_index TEXT, revenue INTEGER )', () => {
+					db.close();
+					callback();
+				});
+			});
+		});
+	});
+}
+
+function loadTickerLists() {
 	var tickerLoader = new TickerListLoader(['amex'], getNextTicker);
 	tickerLoader.getNextExchange();
+}
+
+function main(args) {
+	initializeDatabase(loadTickerLists);
 }
 
 const args = process.argv;
