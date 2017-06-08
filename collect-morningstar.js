@@ -48,28 +48,32 @@ ResultParser.prototype.onclosetag = function(name) {
 	}
 };
 
-function processResult(result) {
-	var rp = new ResultParser();
-	rp.parser.write(result);
-	rp.parser.end();
-	console.log(JSON.stringify(rp.years));
-
+function insertResultData(currentTicker, years) {
 	var db = new sqlite3.Database(DB_FILE_NAME);
 	var stmt = db.prepare('INSERT INTO years VALUES (?, ?, ?)');
-	for (var year_index in rp.years) {
-		stmt.run('AAPL', year_index, rp.years[year_index]);
+	for (var year_index in years) {
+		stmt.run(currentTicker, year_index, years[year_index]);
 	}
 	stmt.finalize(() => {
 		db.close();
 	});
-	console.log(JSON.stringify(rp.revenueByYear));
 }
 
-function handleResponseEnd(tickers) {
+function processResult(result, currentTicker) {
+	var rp = new ResultParser();
+	rp.parser.write(result);
+	rp.parser.end();
+	console.log(JSON.stringify(rp.years));
+	console.log(JSON.stringify(rp.revenueByYear));
+
+	insertResultData(currentTicker, rp.years);
+}
+
+function handleResponseEnd(currentTicker, tickers) {
 	try {
 		var parsedData = JSON.parse(this.rawData);
 		if (parsedData.result !== undefined) {
-			processResult(parsedData.result);
+			processResult(parsedData.result, currentTicker);
 		} else {
 			console.log(`No "result" property found in returned JSON for ticker ${nextTicker}. Cannot process data.`);
 		}
@@ -83,7 +87,7 @@ function handleResponseData(chunk) {
 	this.rawData += chunk;
 }
 
-function handleMorningstarResponse(response, tickers) {
+function handleMorningstarResponse(response, currentTicker, tickers) {
 	if (response.statusCode !== 200) {
 		console.log(`Error: Server reponded with status code ${response.statusCode}`);
 		response.resume();
@@ -92,7 +96,7 @@ function handleMorningstarResponse(response, tickers) {
 
 	this.rawData = '';
 	response.on('data', handleResponseData.bind(this));
-	response.on('end', handleResponseEnd.bind(this, tickers));
+	response.on('end', handleResponseEnd.bind(this, currentTicker, tickers));
 }
 
 function getNextTicker(tickers) {
@@ -103,7 +107,9 @@ function getNextTicker(tickers) {
 	}
 
 	console.log(`Retrieving morningstar data for ticker ${nextTicker}.`);
-	http.get(MORNINGSTAR_BASE_URL + nextTicker, (response) => handleMorningstarResponse(response, tickers));
+	http.get(MORNINGSTAR_BASE_URL + nextTicker, (response) => {
+		handleMorningstarResponse(response, nextTicker, tickers)
+	});
 }
 
 function TickerListLoader(exchanges, callback) {
@@ -156,7 +162,7 @@ TickerListLoader.prototype.getNextExchange = function() {
 };
 
 function main(args) {
-	var tickerLoader = new TickerListLoader(['amex', 'nyse'], getNextTicker);
+	var tickerLoader = new TickerListLoader(['amex'], getNextTicker);
 	tickerLoader.getNextExchange();
 }
 
