@@ -86,7 +86,7 @@ function handleMorningstarResponse(response, tickers) {
 
 function getNextTicker(tickers) {
 	var nextTicker = tickers.shift();
-	if (typeof nextTicker === 'undefined') {
+	if (nextTicker === undefined) {
 		console.log('Finished retrieiving morningstar data for all tickers.');
 		return;
 	}
@@ -95,37 +95,63 @@ function getNextTicker(tickers) {
 	http.get(MORNINGSTAR_BASE_URL + nextTicker, (response) => handleMorningstarResponse(response, tickers));
 }
 
-function getTickerListFromNasdaq(exchanges) {
-	var nextExchange = exchanges.shift();
+function TickerListLoader(exchanges, callback) {
+	this.tickerList = [];
+	this.exchanges = exchanges;
+	this.callback = callback;
+	this.count = 0;
+	this.rawData = '';
+};
+
+TickerListLoader.prototype.handleResponseEnd = function(rawData) {
+	var lines = this.rawData.split('\n');
+	for (var line of lines) {
+		var cols = line.split(',');
+		var ticker = cols[0].replace(/"/g, '').trim();
+		if (ticker) {
+			this.tickerList.push(ticker);
+		}
+	}		
+	this.getNextExchange();
+};
+
+TickerListLoader.prototype.getNextExchange = function() {
+	if (this.count === 0) {
+		console.log(`Loading ticker lists from exchanges ${this.exchanges}.`);
+	}
+	this.count++;
+
+	var nextExchange = this.exchanges.shift();
 	if (nextExchange === undefined) {
+		console.log('Finished loading ticker lists from all exchanges.');
+		console.log(`Final tickerList =  ${JSON.stringify(this.tickerList)}`);
+		this.callback(this.tickerList);
 		return;
 	}
 
 	http.get(NASDAQ_TICKERS_URL + nextExchange, (response) => {
-		var rawData = '';
-		var tickerList = [];
-
 		if (response.statusCode !== 200) {
 			console.log(`Error: Nasdaq server responded with status code ${response.statusCode}`);
 			return;
 		}
 
 		response.on('data', (chunk) => {
-			rawData += chunk;
+			this.rawData += chunk;
 		})
 
-		response.on('end', () => {
+		response.on('end', this.handleResponseEnd.bind(this));
+		/* response.on('end', () => {
 			var lines = rawData.split('\n');
 			for (var line of lines) {
 				var cols = line.split(',');
 				var ticker = cols[0].replace(/"/g, '').trim();
 				if (ticker) {
-					tickerList.push(ticker);
+					this.tickerList.push(ticker);
 				}
 			}
-			console.log('tickerList = ' + JSON.stringify(tickerList));
-			getTickerListFromNasdaq(exchanges);
-		});
+			
+			this.getNextExchange();
+		}); */
 	});
 }
 
@@ -137,9 +163,8 @@ function getTickerListFromNasdaq(exchanges) {
 } */
 
 function main(args) {
-	// var tickers = ['AAPL', 'GOOGL', 'MSFT', 'FB', 'AMZN', 'NFLX', 'TSLA', 'TWTR', 'BABA', 'BIDU', 'PYPL', 'SPLK', 'SQ', 'CRM', 'TWLO', 'BOX', 'CVNA'];
-	// getNextTicker(tickers);
-	getTickerListFromNasdaq(EXCHANGES.slice());
+	var tickerLoader = new TickerListLoader(['amex'], getNextTicker);
+	tickerLoader.getNextExchange();
 }
 
 const args = process.argv;
