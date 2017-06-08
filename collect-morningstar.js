@@ -112,12 +112,12 @@ TickerListLoader.prototype.handleResponseEnd = function(rawData) {
 			this.tickerList.push(ticker);
 		}
 	}
-	this.getNextExchange();
+	setTimeout(this.getNextExchange.bind(this), THROTTLE_DELAY);
 };
 
 TickerListLoader.prototype.getNextExchange = function() {
 	if (this.count === 0) {
-		console.log(`Loading ticker lists from exchanges ${this.exchanges}.`);
+		console.log(`Loading ticker lists from exchanges ${this.exchanges.join(', ')}.`);
 	}
 	this.count++;
 
@@ -142,10 +142,10 @@ TickerListLoader.prototype.getNextExchange = function() {
 
 		response.on('end', this.handleResponseEnd.bind(this));
 	});
-}
+};
 
 function main(args) {
-	var tickerLoader = new TickerListLoader(['amex'], getNextTicker);
+	var tickerLoader = new TickerListLoader(['amex', 'nyse'], getNextTicker);
 	tickerLoader.getNextExchange();
 }
 
