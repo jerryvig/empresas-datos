@@ -52,40 +52,45 @@ function processResult(result) {
 	console.log(JSON.stringify(p.revenueByYear));
 }
 
+function handleResponseEnd(tickers) {
+	try {
+		var parsedData = JSON.parse(this.rawData);
+		if (parsedData.result !== undefined) {
+			processResult(parsedData.result);
+		} else {
+			console.log(`No "result" property found in returned JSON for ticker ${nextTicker}. Cannot process data.`);
+		}
+	} catch (error) {
+		console.log(`Error thrown when parsing JSON: ${error.message}.`);
+	} 
+	setTimeout(getNextTicker, THROTTLE_DELAY, tickers);
+}
+
+function handleResponseData(chunk) {
+	this.rawData += chunk;
+}
+
+function handleMorningstarResponse(response, tickers) {
+	if (response.statusCode !== 200) {
+		console.log(`Error: Server reponded with status code ${response.statusCode}`);
+		response.resume();
+		setTimeout(getNextTicker, THROTTLE_DELAY, tickers);
+	}
+
+	this.rawData = '';
+	response.on('data', handleResponseData.bind(this));
+	response.on('end', handleResponseEnd.bind(this, tickers));
+}
+
 function getNextTicker(tickers) {
-	var nextTicker = tickers.pop();
+	var nextTicker = tickers.shift();
 	if (typeof nextTicker === 'undefined') {
 		console.log('Finished retrieiving morningstar data for all tickers.');
 		return;
 	}
 
 	console.log(`Retrieving morningstar data for ticker ${nextTicker}.`);
-	http.get(BASE_URL + nextTicker, (res) => {
-		if (res.statusCode !== 200) {
-			console.log(`Error: Server reponded with status code ${res.statusCode}`);
-			res.resume();
-			setTimeout(getNextTicker, THROTTLE_DELAY, tickers);
-		}
-
-		var rawData = '';
-		res.on('data', (chunk) => {
-			rawData += chunk;
-		});
-
-		res.on('end', () => {
-			try {
-				var parsedData = JSON.parse(rawData);
-				if (parsedData.result !== undefined) {
-					processResult(parsedData.result);
-				} else {
-					console.log(`No "result" property found in returned JSON for ticker ${nextTicker}. Cannot process data.`);
-				}
-			} catch (error) {
-				console.log(`Error thrown when parsing JSON: ${error.message}.`);
-			} 
-			setTimeout(getNextTicker, THROTTLE_DELAY, tickers);
-		});
-	});
+	http.get(BASE_URL + nextTicker, (response) => handleMorningstarResponse(response, tickers));
 }
 
 function main(args) {
