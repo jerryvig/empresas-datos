@@ -7,6 +7,7 @@ const NASDAQ_TICKERS_URL = 'http://www.nasdaq.com/screening/companies-by-name.as
 const THROTTLE_DELAY = 1500;
 const YEARS = ['Y_1', 'Y_2', 'Y_3', 'Y_4', 'Y_5', 'Y_6'];
 const EXCHANGES = ['nasdaq', 'nyse', 'amex'];
+const DB_FILE_NAME = 'morningstar_data.sqlite3';
 
 function ResultParser() {
 	this.currentYear = null;
@@ -51,6 +52,13 @@ function processResult(result) {
 	var p = new ResultParser();
 	p.parser.write(result);
 	p.parser.end();
+
+	var db = new sqlite3.Database(DB_FILE_NAME);
+	db.all('SELECT * FROM names ORDER BY name', (err, rows) => {
+		rows.forEach((row) => {
+			console.log(`name = ${row.name}`);
+		});
+	});
 	console.log(JSON.stringify(p.years));
 	console.log(JSON.stringify(p.revenueByYear));
 }
