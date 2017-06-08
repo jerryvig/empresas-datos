@@ -185,6 +185,7 @@ function initializeDatabase() {
 				resolve();
 				return;
 			}
+			console.log(`Running SQL statement: "${nextStmt}".`);
 			db.run(nextStmt, runNextStatment);
 		}
 		runNextStatment();
