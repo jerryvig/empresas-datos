@@ -136,11 +136,16 @@ TickerListLoader.prototype.handleResponseEnd = function(rawData) {
 	for (var line of lines) {
 		var cols = line.split(',');
 		var ticker = cols[0].replace(/"/g, '').trim();
-		if (ticker.length > 0) {
+		if (ticker.length > 0 && ticker !== 'Symbol') {
 			this.tickerList.push(ticker);
 		}
 	}
-	setTimeout(this.getNextExchange.bind(this), THROTTLE_DELAY);
+
+	if (this.exchanges.length > 0) {
+		setTimeout(this.getNextExchange.bind(this), THROTTLE_DELAY);
+	} else {
+		this.getNextExchange();
+	}
 };
 
 TickerListLoader.prototype.getNextExchange = function() {
@@ -194,12 +199,16 @@ function initializeDatabase() {
 }
 
 function loadTickerLists() {
-	var tickerLoader = new TickerListLoader(['amex'], getNextTicker);
-	tickerLoader.getNextExchange();
+	return new Promise((resolve, reject) => {
+		var tickerLoader = new TickerListLoader(['amex'], resolve);
+		tickerLoader.getNextExchange();
+	});
 }
 
 function main(args) {
-	initializeDatabase().then(loadTickerLists);
+	initializeDatabase()
+		.then(loadTickerLists)
+		.then(getNextTicker);
 }
 
 const args = process.argv;
