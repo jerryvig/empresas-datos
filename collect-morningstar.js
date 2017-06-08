@@ -127,6 +127,10 @@ function TickerListLoader(exchanges, callback) {
 	this.rawData = '';
 }
 
+TickerListLoader.prototype.handleResponseData = function(chunk) {
+	this.rawData += chunk;
+};
+
 TickerListLoader.prototype.handleResponseEnd = function(rawData) {
 	var lines = this.rawData.split('\n');
 	for (var line of lines) {
@@ -155,15 +159,12 @@ TickerListLoader.prototype.getNextExchange = function() {
 
 	http.get(NASDAQ_TICKERS_URL + nextExchange, (response) => {
 		if (response.statusCode !== 200) {
-			console.log(`Error: Nasdaq server responded with status code ${response.statusCode}`);
+			console.log(`Error: Nasdaq server responded with status code ${response.statusCode}.`);
 			response.resume();
 			return;
 		}
 
-		response.on('data', (chunk) => {
-			this.rawData += chunk;
-		});
-
+		response.on('data', this.handleResponseData.bind(this));
 		response.on('end', this.handleResponseEnd.bind(this));
 	});
 };
