@@ -49,73 +49,95 @@ ResultParser.prototype.onclosetag = function(name) {
 	}
 };
 
-function insertResultData(currentTicker, years, revenueByYear) {
+function MorningstarCollector(tickers, resolver) {
+	this.tickers = tickers;
+	this.resolver = resolver;
+	this.currentTicker = null;
+	this.count = 0;
+}
+
+MorningstarCollector.prototype.insertResultData = function(years, revenueByYear) {
 	var db = new sqlite3.Database(DB_FILE_NAME);
 	var year_stmt = db.prepare('INSERT INTO years VALUES (?, ?, ?)');
 	var revenue_stmt = db.prepare('INSERT INTO revenue VALUES (?, ?, ?)');
 	for (var yearIndex in years) {
-		year_stmt.run(currentTicker, yearIndex, years[yearIndex]);
+		year_stmt.run(this.currentTicker, yearIndex, years[yearIndex]);
 	}
 	year_stmt.finalize(() => {
 		for (var yearIndex in revenueByYear) {
-			revenue_stmt.run(currentTicker, yearIndex, revenueByYear[yearIndex])
+			revenue_stmt.run(this.currentTicker, yearIndex, revenueByYear[yearIndex])
 		}
 		revenue_stmt.finalize(() => {
 			db.close();
+			this.getNextTicker();
 		});
 	});
-}
+};
 
-function processResult(result, currentTicker) {
+MorningstarCollector.prototype.processResult = function(result) {
 	var rp = new ResultParser();
 	rp.parser.write(result);
 	rp.parser.end();
 	console.log(JSON.stringify(rp.years));
 	console.log(JSON.stringify(rp.revenueByYear));
+	this.insertResultData(rp.years, rp.revenueByYear);
+};
 
-	insertResultData(currentTicker, rp.years, rp.revenueByYear);
-}
-
-function handleResponseEnd(currentTicker, tickers) {
+MorningstarCollector.prototype.handleResponseEnd = function() {
 	try {
 		var parsedData = JSON.parse(this.rawData);
 		if (parsedData.result !== undefined) {
-			processResult(parsedData.result, currentTicker);
+			this.processResult(parsedData.result);
 		} else {
 			console.log(`No "result" property found in returned JSON for ticker ${nextTicker}. Cannot process data.`);
+			this.getNextTicker();
 		}
 	} catch (error) {
 		console.log(`Error thrown when parsing JSON: ${error.message}.`);
-	} 
-	setTimeout(getNextTicker, THROTTLE_DELAY, tickers);
-}
+		this.getNextTicker();
+	}
+};
 
-function handleResponseData(chunk) {
+MorningstarCollector.prototype.handleResponseData = function(chunk) {
 	this.rawData += chunk;
-}
+};
 
-function handleMorningstarResponse(response, currentTicker, tickers) {
+MorningstarCollector.prototype.handleMorningstarResponse = function(response) {
 	if (response.statusCode !== 200) {
 		console.log(`Error: Server reponded with status code ${response.statusCode}`);
 		response.resume();
-		setTimeout(getNextTicker, THROTTLE_DELAY, tickers);
+		this.getNextTicker();
 	}
 
 	this.rawData = '';
-	response.on('data', handleResponseData.bind(this));
-	response.on('end', handleResponseEnd.bind(this, currentTicker, tickers));
-}
+	response.on('data', this.handleResponseData.bind(this));
+	response.on('end', this.handleResponseEnd.bind(this));
+};
 
-function getNextTicker(tickers) {
-	var nextTicker = tickers.shift();
+MorningstarCollector.prototype.getNextTicker = function() {
+	var nextTicker = this.tickers.shift();
+	this.currentTicker = nextTicker;
 	if (nextTicker === undefined) {
 		console.log('Finished retrieiving morningstar data for all tickers.');
+		this.resolver();
 		return;
 	}
 
 	console.log(`Retrieving morningstar data for ticker ${nextTicker}.`);
-	http.get(MORNINGSTAR_BASE_URL + nextTicker, (response) => {
-		handleMorningstarResponse(response, nextTicker, tickers)
+	if (this.count > 0) {
+		setTimeout(() => {
+			http.get(MORNINGSTAR_BASE_URL + nextTicker, this.handleMorningstarResponse.bind(this));
+		}, THROTTLE_DELAY);
+	} else {
+		http.get(MORNINGSTAR_BASE_URL + nextTicker, this.handleMorningstarResponse.bind(this));
+	}
+	this.count++;
+};
+
+function loadMorningstarData(tickers) {
+	return new Promise((resolver, rejector) => {
+		var morningstarCollector = new MorningstarCollector(tickers, resolver);
+		morningstarCollector.getNextTicker();
 	});
 }
 
@@ -208,7 +230,7 @@ function loadTickerLists() {
 function main(args) {
 	initializeDatabase()
 		.then(loadTickerLists)
-		.then(getNextTicker);
+		.then(loadMorningstarData);
 }
 
 const args = process.argv;
