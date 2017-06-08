@@ -1,5 +1,6 @@
 const http = require('http');
 const htmlparser = require('htmlparser2');
+const sqlite3 = require('sqlite3').verbose();
 
 const MORNINGSTAR_BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html?&t='
 const NASDAQ_TICKERS_URL = 'http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&render=download&exchange='
