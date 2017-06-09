@@ -3,77 +3,77 @@ const htmlparser = require('htmlparser2');
 const sqlite3 = require('sqlite3').verbose();
 
 const MORNINGSTAR_BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html?&t='
-const NASDAQ_TICKERS_URL = 'http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&render=download&exchange='
+const NASDAQ_TICKERS_URL = 'http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&render=download&exchange=';
 const THROTTLE_DELAY = 1500;
 const YEARS = ['Y_1', 'Y_2', 'Y_3', 'Y_4', 'Y_5', 'Y_6'];
 const EXCHANGES = ['nasdaq', 'nyse', 'amex'];
 const DB_FILE_NAME = 'morningstar_data.sqlite3';
 
 function ResultParser() {
-	this.currentYear = null;
-	this.years = {};
-	this.revenueByYear = {};
-	this.yearIndex = 0;
-	this.parser = new htmlparser.Parser({
-		onopentag: this.onopentag.bind(this),
-		ontext: this.ontext.bind(this),
-		onclosetag: this.onclosetag.bind(this)
-	}, {decodeEntities: true});
+    this.currentYear = null;
+    this.years = {};
+    this.revenueByYear = {};
+    this.yearIndex = 0;
+    this.parser = new htmlparser.Parser({
+        onopentag: this.onopentag.bind(this),
+        ontext: this.ontext.bind(this),
+        onclosetag: this.onclosetag.bind(this)
+    }, {decodeEntities: true});
 }
 
 ResultParser.prototype.onopentag = function(name, attrs) {
-	if (name === 'div') {
-		if (attrs.class === 'year' && YEARS.indexOf(attrs.id) !== -1) {
-			this.currentYear = attrs.id;
-		}
-		if (attrs.class === 'pos' && YEARS.indexOf(attrs.id) !== -1 && attrs.rawvalue !== undefined &&
-			attrs.style === 'overflow:hidden;white-space: nowrap;') {
-			if (this.yearIndex < 6) {
-				this.revenueByYear[attrs.id] = attrs.rawvalue;
-			}
-			this.yearIndex++;
-		}
-	}
+    if (name === 'div') {
+        if (attrs.class === 'year' && YEARS.indexOf(attrs.id) !== -1) {
+            this.currentYear = attrs.id;
+        }
+        if (attrs.class === 'pos' && YEARS.indexOf(attrs.id) !== -1 && attrs.rawvalue !== undefined &&
+            attrs.style === 'overflow:hidden;white-space: nowrap;') {
+            if (this.yearIndex < 6) {
+                this.revenueByYear[attrs.id] = attrs.rawvalue;
+            }
+            this.yearIndex++;
+        }
+    }
 };
 
 ResultParser.prototype.ontext = function(text) {
-	if (this.currentYear !== null) {
-		this.years[this.currentYear] = text.trim();
-	}
+    if (this.currentYear !== null) {
+        this.years[this.currentYear] = text.trim();
+    }
 };
 
 ResultParser.prototype.onclosetag = function(name) {
-	if (name === 'div') {
-		this.currentYear = null;
-	}
+    if (name === 'div') {
+        this.currentYear = null;
+    }
 };
 
 function MorningstarCollector(resolver) {
-	this.tickers = [];
-	this.resolver = resolver;
-	this.currentTicker = null;
-	this.count = 0;
+    this.tickers = [];
+    this.resolver = resolver;
+    this.currentTicker = null;
+    this.count = 0;
 }
 
 MorningstarCollector.prototype.insertResultData = function(years, revenueByYear) {
-	console.log('Inserting results for %s.', this.currentTicker);
-	var startTime = process.hrtime();
-	var db = new sqlite3.Database(DB_FILE_NAME);
-	db.run('BEGIN');
-	var year_stmt = db.prepare('INSERT INTO years VALUES (?, ?, ?)');
-	var revenue_stmt = db.prepare('INSERT INTO revenue VALUES (?, ?, ?)');
-	for (var yearIndex in years) {
-		year_stmt.run(this.currentTicker, yearIndex, years[yearIndex]);
-	}
-	year_stmt.finalize(() => {
-		for (var yearIndex in revenueByYear) {
-			revenue_stmt.run(this.currentTicker, yearIndex, revenueByYear[yearIndex])
-		}
+    console.log('Inserting results for %s.', this.currentTicker);
+    var startTime = process.hrtime();
+    var db = new sqlite3.Database(DB_FILE_NAME);
+    db.run('BEGIN');
+    var year_stmt = db.prepare('INSERT INTO years VALUES (?, ?, ?)');
+    var revenue_stmt = db.prepare('INSERT INTO revenue VALUES (?, ?, ?)');
+    for (var yearIndex in years) {
+        year_stmt.run(this.currentTicker, yearIndex, years[yearIndex]);
+    }
+    year_stmt.finalize(() => {
+        for (var yearIndex in revenueByYear) {
+            revenue_stmt.run(this.currentTicker, yearIndex, revenueByYear[yearIndex]);
+        }
 		revenue_stmt.finalize(() => {
 			db.run('COMMIT');
 			db.close();
 			var endTime = process.hrtime();
-			var insertTime = (endTime[0] - startTime[0])*1000 + (endTime[1] - startTime[1])/1e6;
+			var insertTime = (endTime[0] - startTime[0]) * 1000 + (endTime[1] - startTime[1]) / 1e6;
 			console.log('Results insertion complete for %s in %f ms.', this.currentTicker, insertTime);
 			this.getNextTicker();
 		});
