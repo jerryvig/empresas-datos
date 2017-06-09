@@ -212,13 +212,13 @@ TickerListLoader.prototype.insertTickers = function() {
 };
 
 TickerListLoader.prototype.checkNoBadStrs = function(tickerString) {
-	var badChars = ['Symbol', '^', '.'];
-	for (var i=0; i<badChars.length; i++) {
-		if (tickerString.includes(badChars[i])) {
-			return false;
-		}
-	}
-	return true;
+    var badChars = ['Symbol', '^', '.'];
+    for (var i=0; i<badChars.length; i++) {
+        if (tickerString.includes(badChars[i])) {
+            return false;
+        }
+    }
+    return true;
 };
 
 TickerListLoader.prototype.handleResponseEnd = function(rawData) {
@@ -292,7 +292,7 @@ function initializeDatabase() {
 	return new Promise((resolve, reject) => {
 		function runNextStatment() {
 			var nextStmt = ddl_statments.shift();
-			if (nextStmt === undefined) {
+			if (nextStmt === unefined) {
 				db.run('COMMIT');
 				db.close();
 				var endTime = process.hrtime();
