@@ -262,6 +262,7 @@ TickerListLoader.prototype.getNextExchange = function() {
 };
 
 function initializeDatabase() {
+	var startTime = Date.now();
 	var ddl_statments = [
 		'DROP TABLE IF EXISTS years',
 		'DROP TABLE IF EXISTS revenue',
@@ -272,12 +273,16 @@ function initializeDatabase() {
 	];
 	console.log('Opening database %s for initialization.', DB_FILE_NAME);
 	var db = new sqlite3.Database(DB_FILE_NAME);
+	db.run('BEGIN');
 	return new Promise((resolve, reject) => {
 		function runNextStatment() {
 			var nextStmt = ddl_statments.shift();
 			if (nextStmt === undefined) {
+				db.run('COMMIT');
 				db.close();
-				console.log('Finished executing schema drop and creation statements.');
+				var endTime = Date.now();
+				console.log('Finished executing schema drop and creation statements in %fs.',
+					(endTime - startTime)/1000);
 				resolve();
 				return;
 			}
