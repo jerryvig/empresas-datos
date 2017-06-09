@@ -48,8 +48,8 @@ ResultParser.prototype.onclosetag = function(name) {
 	}
 };
 
-function MorningstarCollector(tickers, resolver) {
-	this.tickers = tickers;
+function MorningstarCollector(resolver) {
+	this.tickers = [];
 	this.resolver = resolver;
 	this.currentTicker = null;
 	this.count = 0;
@@ -133,10 +133,29 @@ MorningstarCollector.prototype.getNextTicker = function() {
 	this.count++;
 };
 
-function loadMorningstarData(tickers) {
+MorningstarCollector.prototype.readTickersFromDatabase = function() {
+	console.log('Reading ticker list from database %s.', DB_FILE_NAME);
+	return new Promise((resolve, reject) => {
+		var db = new sqlite3.Database(DB_FILE_NAME);
+		db.all('SELECT ticker FROM ticker_list ORDER BY ticker ASC', (err, rows) => {
+			var ticker_count = 0;
+			for (row of rows) {
+				ticker_count++;
+				this.tickers.push(row.ticker);
+			}
+			console.log('Read %d ticker symbols from the database.', ticker_count);
+			db.close();
+			resolve();
+		});
+	});
+};
+
+function loadMorningstarData() {
 	return new Promise((resolver, rejector) => {
-		var morningstarCollector = new MorningstarCollector(tickers, resolver);
-		morningstarCollector.getNextTicker();
+		console.log('Instantiating MorningstarCollector.');
+		var morningstarCollector = new MorningstarCollector(resolver);
+		morningstarCollector.readTickersFromDatabase()
+			.then(morningstarCollector.getNextTicker.bind(morningstarCollector));
 	});
 }
 
@@ -208,7 +227,7 @@ TickerListLoader.prototype.getNextExchange = function() {
 
 	var nextExchange = this.exchanges.shift();
 	if (nextExchange === undefined) {
-		console.log(`Finished loading ${this.tickerCount} tickers for ${this.count} exchanges.`);
+		console.log('Finished loading %s tickers for %s exchanges.', this.tickerCount, this.count);
 		console.log('Calling promise resolver for TickerListLoader.');
 		this.resolver();
 		return;
