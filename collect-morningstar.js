@@ -68,7 +68,8 @@ MorningstarCollector.prototype.insertResultData = function(years, revenueByYear)
 			revenue_stmt.run(this.currentTicker, yearIndex, revenueByYear[yearIndex])
 		}
 		revenue_stmt.finalize(() => {
-			console.log('Results insertion complete for %s.', this.currentTicker);
+			var d = new Date();
+			console.log('Results insertion complete for %s at %s.', this.currentTicker, d.toISOString());
 			db.close();
 			this.getNextTicker();
 		});
@@ -195,13 +196,23 @@ TickerListLoader.prototype.insertTickers = function() {
 	db.run('COMMIT');
 };
 
+TickerListLoader.prototype.checkNoBadStrs = function(tickerString) {
+	var badChars = ['Symbol', '^', '.'];
+	for (var i=0; i<badChars.length; i++) {
+		if (tickerString.includes(badChars[i])) {
+			return false;
+		}
+	}
+	return true;
+};
+
 TickerListLoader.prototype.handleResponseEnd = function(rawData) {
 	console.log('Processing nasdaq response end event. Appending tickers.');
 	var lines = this.rawData.split('\n');
 	for (var line of lines) {
 		var cols = line.split(',');
 		var ticker = cols[0].replace(/"/g, '').trim();
-		if (ticker.length > 0 && ticker !== 'Symbol') {
+		if (ticker.length > 0 && this.checkNoBadStrs(ticker)) {
 			this.tickerList.push(ticker);
 			this.tickerCount++;
 		}
