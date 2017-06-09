@@ -285,16 +285,18 @@ function loadTickerLists() {
 }
 
 function main(args) {
+	var startTime = Date.now();
 	initializeDatabase()
 		.then(loadTickerLists)
 		.then(loadMorningstarData)
 		.then(() => {
-			console.log('Morningstar data collection complete.');
+			console.log('Morningstar data collection completed in %fs.', (endTime - startTime)/1000);
 		});
 	/* initializeDatabase()
 		.then(loadTickerLists)
 		.then(() => {
-			console.log('Finished loading ticker lists. Check db.');
+			var endTime = Date.now();
+			console.log('Finished loading ticker lists in %fs.', (endTime - startTime)/1000);
 		}); */
 	//initializeDatabase().then(() => { console.log('done')});
 }
