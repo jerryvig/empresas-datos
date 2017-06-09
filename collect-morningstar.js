@@ -58,7 +58,8 @@ function MorningstarCollector(resolver) {
     this.count = 0;
 }
 
-MorningstarCollector.prototype.insertResultData = function(years, revenueByYear) {
+MorningstarCollector.prototype.insertResultData = function(years,
+    revenueByYear) {
     console.log('Inserting results for %s.', this.currentTicker);
     var startTime = process.hrtime();
     var db = new sqlite3.Database(DB_FILE_NAME);
@@ -70,7 +71,8 @@ MorningstarCollector.prototype.insertResultData = function(years, revenueByYear)
     }
     year_stmt.finalize(() => {
         for (var yearIndex in revenueByYear) {
-            revenue_stmt.run(this.currentTicker, yearIndex, revenueByYear[yearIndex]);
+            revenue_stmt.run(this.currentTicker, yearIndex,
+                revenueByYear[yearIndex]);
         }
         revenue_stmt.finalize(() => {
             db.run('COMMIT');
