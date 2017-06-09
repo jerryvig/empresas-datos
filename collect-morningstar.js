@@ -28,11 +28,16 @@ ResultParser.prototype.onopentag = function(name, attrs) {
         if (attrs.class === 'year' && YEARS.indexOf(attrs.id) !== -1) {
             this.currentYear = attrs.id;
         }
-        if (attrs.class === 'pos' && YEARS.indexOf(attrs.id) !== -1 &&
+        if (attrs.class === 'pos' &&
+            YEARS.indexOf(attrs.id) !== -1 &&
             attrs.rawvalue !== undefined &&
             attrs.style === 'overflow:hidden;white-space: nowrap;') {
             if (this.yearIndex < 6) {
-                this.revenueByYear[attrs.id] = attrs.rawvalue;
+                var revenue = Number(attrs.rawvalue);
+                if (attrs.rawvalue === String.fromCharCode(8212)) {
+                    revenue = 0;
+                }
+                this.revenueByYear[attrs.id] = revenue;
             }
             this.yearIndex++;
         }
@@ -204,8 +209,8 @@ TickerListLoader.prototype.insertTickers = function() {
 		db.run('COMMIT');
 		db.close();
 		var endTime = process.hrtime();
-		var diff = (endTime[0] - startTime[0])*1000 + (endTime[1] - startTime[1])/1e6;
-		console.log('Inserted %d tickers in %f ms.', this.tickerList.length, diff);
+		console.log('Inserted %d tickers in %f ms.', this.tickerList.length,
+            getHrTimeDiffMilliseconds(startTime, endTime));
 		this.tickerList = [];
 		this.getNextExchange();
 	});
@@ -276,6 +281,10 @@ TickerListLoader.prototype.getNextExchange = function() {
 	this.count++;
 };
 
+function getHrTimeDiffMilliseconds(startTime, endTime) {
+    return (endTime[0] - startTime[0])*1000 + (endTime[1] - startTime[1])/1e6;
+}
+
 function initializeDatabase() {
 	var startTime = process.hrtime();
 	var ddl_statments = [
@@ -296,8 +305,8 @@ function initializeDatabase() {
 				db.run('COMMIT');
 				db.close();
 				var endTime = process.hrtime();
-				var diff = (endTime[0] - startTime[0])*1000 + (endTime[1] - startTime[1])/1e6;
-				console.log('Finished executing schema drop and creation statements in %f ms.', diff);
+				console.log('Finished executing schema drop and creation statements in %f ms.',
+                    getHrTimeDiffMilliseconds(startTime, endTime));
 				resolve();
 				return;
 			}
@@ -316,13 +325,13 @@ function loadTickerLists() {
 }
 
 function main(args) {
-    var startTime = Date.now();
+    var startTime = process.hrtime();
     initializeDatabase()
         .then(loadTickerLists)
         .then(loadMorningstarData)
         .then(() => {
-            var endTime = Date.now();
-            console.log('Morningstar data collection completed in %fs.', (endTime - startTime)/1000);
+            var endTime = process.hrtime();
+            console.log('Morningstar data collection completed in %fs.', getHrTimeDiffMilliseconds(startTime, endTime));
         });
 	/* initializeDatabase()
 		.then(loadTickerLists)
