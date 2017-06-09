@@ -74,15 +74,18 @@ MorningstarCollector.prototype.insertResultData = function(years, revenueByYear)
 };
 
 MorningstarCollector.prototype.processResult = function(result) {
+	console.log('Parsing html result.');
 	var rp = new ResultParser();
 	rp.parser.write(result);
 	rp.parser.end();
-	console.log(JSON.stringify(rp.years));
-	console.log(JSON.stringify(rp.revenueByYear));
+	console.log('Finished parsing html.');
+	console.log('Years: %s', JSON.stringify(rp.years));
+	console.log('Revenue: %s', JSON.stringify(rp.revenueByYear));
 	this.insertResultData(rp.years, rp.revenueByYear);
 };
 
 MorningstarCollector.prototype.handleResponseEnd = function() {
+	console.log('Processing response end event for ticker %s.', this.currentTicker);
 	try {
 		var parsedData = JSON.parse(this.rawData);
 		if (parsedData.result !== undefined) {
@@ -255,6 +258,7 @@ function initializeDatabase() {
 		'CREATE TABLE revenue ( ticker TEXT, year_index TEXT, revenue INTEGER )',
 		'CREATE TABLE ticker_list ( ticker TEXT )'
 	];
+	console.log('Opening database %s for initialization.', DB_FILE_NAME);
 	var db = new sqlite3.Database(DB_FILE_NAME);
 	return new Promise((resolve, reject) => {
 		function runNextStatment() {
