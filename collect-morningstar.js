@@ -181,6 +181,7 @@ TickerListLoader.prototype.handleResponseData = function(chunk) {
 
 TickerListLoader.prototype.insertTickers = function() {
 	console.log(`Inserting ${this.tickerList.length} tickers into db.`);
+	var startTime = process.hrtime();
 	var db = new sqlite3.Database(DB_FILE_NAME);
 	db.run('BEGIN');
 	var stmt = db.prepare('INSERT INTO ticker_list VALUES (?)');
@@ -189,11 +190,14 @@ TickerListLoader.prototype.insertTickers = function() {
 	}
 	console.log('Running SQL ', stmt, '.');
 	stmt.finalize(() => {
+		db.run('COMMIT');
 		db.close();
+		var endTime = process.hrtime();
+		var diff = (endTime[0] - startTime[0])*1000 + (endTime[1] - startTime[1])/1e6;
+		console.log('Inserted %d tickers in %f ms.', this.tickerList.length, diff);
 		this.tickerList = [];
 		this.getNextExchange();
 	});
-	db.run('COMMIT');
 };
 
 TickerListLoader.prototype.checkNoBadStrs = function(tickerString) {
