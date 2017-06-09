@@ -83,8 +83,7 @@ MorningstarCollector.prototype.insertResultData = function(years,
             db.run('COMMIT');
             db.close();
             var endTime = process.hrtime();
-            var insertTime = (endTime[0] - startTime[0]) * 1000 +
-                (endTime[1] - startTime[1]) / 1e6;
+            var insertTime = getHrTimeDiffMilliseconds(startTime, endTime);
             console.log('Results insertion complete for %s in %f ms.',
                 this.currentTicker, insertTime);
             this.getNextTicker();
@@ -336,8 +335,8 @@ function main(args) {
 	/* initializeDatabase()
 		.then(loadTickerLists)
 		.then(() => {
-			var endTime = Date.now();
-			console.log('Finished loading ticker lists in %fs.', (endTime - startTime)/1000);
+			var endTime = process.hrtime();
+			console.log('Finished loading ticker lists in %fs.', getHrTimeDiffMilliseconds(startTime, endTime));
 		}); */
 	//initializeDatabase().then(() => { console.log('done')});
 }
