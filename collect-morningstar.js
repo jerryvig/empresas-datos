@@ -140,11 +140,12 @@ function loadMorningstarData(tickers) {
 	});
 }
 
-function TickerListLoader(exchanges, callback) {
+function TickerListLoader(exchanges, resolver) {
 	this.tickerList = [];
 	this.exchanges = exchanges;
-	this.callback = callback;
+	this.resolver = resolver;
 	this.count = 0;
+	this.tickerCount = 0;
 	this.rawData = '';
 }
 
@@ -152,17 +153,41 @@ TickerListLoader.prototype.handleResponseData = function(chunk) {
 	this.rawData += chunk;
 };
 
+TickerListLoader.prototype.insertTickers = function() {
+	console.log(`Inserting ${this.tickerList.length} tickers into db.`);
+	var db = new sqlite3.Database(DB_FILE_NAME);
+	db.run('BEGIN');
+	var stmt = db.prepare('INSERT INTO ticker_list VALUES (?)');
+	for (var i=0; i<this.tickerList.length; i++) {
+		stmt.run(this.tickerList[i]);
+	}
+	console.log(stmt);
+	stmt.finalize(() => {
+		db.close();
+		this.tickerList = [];
+		this.getNextExchange();
+	});
+	db.run('COMMIT');
+};
+
 TickerListLoader.prototype.handleResponseEnd = function(rawData) {
+	console.log('Processing nasdaq response end event. Appending tickers.');
 	var lines = this.rawData.split('\n');
 	for (var line of lines) {
 		var cols = line.split(',');
 		var ticker = cols[0].replace(/"/g, '').trim();
 		if (ticker.length > 0 && ticker !== 'Symbol') {
 			this.tickerList.push(ticker);
+			this.tickerCount++;
 		}
 	}
 
-	this.getNextExchange();
+	if (this.tickerList.length > 0) {
+		this.insertTickers();
+	} else {
+		this.tickerList = [];
+		this.getNextExchange();
+	}
 };
 
 TickerListLoader.prototype.handleNasdaqResponse = function(response) {
@@ -179,23 +204,25 @@ TickerListLoader.prototype.handleNasdaqResponse = function(response) {
 TickerListLoader.prototype.getNextExchange = function() {
 	if (this.count === 0) {
 		console.log(`Loading ticker lists from exchanges ${this.exchanges.join(', ')}.`);
-		http.get(NASDAQ_TICKERS_URL + nextExchange, this.handleNasdaqResponse.bind(this));
-		this.count++;
-		return;
 	}
 
 	var nextExchange = this.exchanges.shift();
 	if (nextExchange === undefined) {
-		console.log('Finished loading ticker lists for all exchanges.');
-		console.log(`Final tickerList =  ${JSON.stringify(this.tickerList)}`);
-		this.callback(this.tickerList);
+		console.log(`Finished loading ${this.tickerCount} tickers for ${this.count} exchanges.`);
+		console.log('Calling resolver for TickerListLoader.');
+		this.resolver();
 		return;
 	}
 
+	console.log('--------------------');
 	console.log(`Loading data for exchange ${nextExchange}.`);
-	setTimeout(() => {
+	if (this.count === 0) {
 		http.get(NASDAQ_TICKERS_URL + nextExchange, this.handleNasdaqResponse.bind(this));
-	}, THROTTLE_DELAY);
+	} else {
+		setTimeout(() => {
+			http.get(NASDAQ_TICKERS_URL + nextExchange, this.handleNasdaqResponse.bind(this));
+		}, THROTTLE_DELAY);
+	}
 	this.count++;
 };
 
@@ -203,8 +230,10 @@ function initializeDatabase() {
 	var ddl_statments = [
 		'DROP TABLE IF EXISTS years',
 		'DROP TABLE IF EXISTS revenue',
+		'DROP TABLE IF EXISTS ticker_list',
 		'CREATE TABLE years ( ticker TEXT, year_index TEXT, year TEXT )',
-		'CREATE TABLE revenue ( ticker TEXT, year_index TEXT, revenue INTEGER )'
+		'CREATE TABLE revenue ( ticker TEXT, year_index TEXT, revenue INTEGER )',
+		'CREATE TABLE ticker_list ( ticker TEXT )'
 	];
 	var db = new sqlite3.Database(DB_FILE_NAME);
 	return new Promise((resolve, reject) => {
@@ -237,9 +266,12 @@ function main(args) {
 		.then(() => {
 			console.log('Finished loading morningstar data.');
 		}); */
-	loadTickerLists().then(() => {
-		console.log('Finished loading ticker lists.');
-	});
+	initializeDatabase()
+		.then(loadTickerLists)
+		.then(() => {
+			console.log('Finished loading ticker lists. Check db.');
+		});
+	//initializeDatabase().then(() => { console.log('done')});
 }
 
 const args = process.argv;
