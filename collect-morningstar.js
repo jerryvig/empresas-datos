@@ -70,6 +70,7 @@ MorningstarCollector.prototype.insertResultData = function(years, revenueByYear)
 			revenue_stmt.run(this.currentTicker, yearIndex, revenueByYear[yearIndex])
 		}
 		revenue_stmt.finalize(() => {
+			db.run('COMMIT');
 			db.close();
 			var endTime = process.hrtime();
 			var insertTime = (endTime[0] - startTime[0])*1000 + (endTime[1] - startTime[1])/1e6;
