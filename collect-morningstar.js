@@ -321,6 +321,7 @@ function main(args) {
         .then(loadTickerLists)
         .then(loadMorningstarData)
         .then(() => {
+            var endTime = Date.now();
             console.log('Morningstar data collection completed in %fs.', (endTime - startTime)/1000);
         });
 	/* initializeDatabase()
