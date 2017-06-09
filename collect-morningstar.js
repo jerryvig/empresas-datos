@@ -145,6 +145,7 @@ MorningstarCollector.prototype.readTickersFromDatabase = function() {
 			}
 			console.log('Read %d ticker symbols from the database.', ticker_count);
 			db.close();
+			console.log('Proceeding to load data for %d tickers from morningstar.', ticker_count);
 			resolve();
 		});
 	});
