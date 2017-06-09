@@ -56,6 +56,7 @@ function MorningstarCollector(resolver) {
 }
 
 MorningstarCollector.prototype.insertResultData = function(years, revenueByYear) {
+	console.log('Inserting results for %s.', this.currentTicker);
 	var db = new sqlite3.Database(DB_FILE_NAME);
 	var year_stmt = db.prepare('INSERT INTO years VALUES (?, ?, ?)');
 	var revenue_stmt = db.prepare('INSERT INTO revenue VALUES (?, ?, ?)');
@@ -67,6 +68,7 @@ MorningstarCollector.prototype.insertResultData = function(years, revenueByYear)
 			revenue_stmt.run(this.currentTicker, yearIndex, revenueByYear[yearIndex])
 		}
 		revenue_stmt.finalize(() => {
+			console.log('Results insertion complete for %s.', this.currentTicker);
 			db.close();
 			this.getNextTicker();
 		});
@@ -120,12 +122,12 @@ MorningstarCollector.prototype.getNextTicker = function() {
 	var nextTicker = this.tickers.shift();
 	this.currentTicker = nextTicker;
 	if (nextTicker === undefined) {
-		console.log('Finished retrieiving morningstar data for all tickers.');
+		console.log(`Finished retrieiving morningstar data for ${this.count} tickers.`);
 		this.resolver();
 		return;
 	}
 
-	console.log(`Retrieving morningstar data for ticker ${nextTicker}.`);
+	console.log(`---------------------\nRetrieving morningstar data for ticker ${nextTicker}.`);
 	if (this.count > 0) {
 		setTimeout(() => {
 			http.get(MORNINGSTAR_BASE_URL + nextTicker, this.handleMorningstarResponse.bind(this));
@@ -237,8 +239,7 @@ TickerListLoader.prototype.getNextExchange = function() {
 		return;
 	}
 
-	console.log('------------------------');
-	console.log(`Loading data for exchange ${nextExchange}.`);
+	console.log(`------------------------\nLoading data for exchange ${nextExchange}.`);
 	if (this.count === 0) {
 		http.get(NASDAQ_TICKERS_URL + nextExchange, this.handleNasdaqResponse.bind(this));
 	} else {
@@ -288,7 +289,7 @@ function main(args) {
 		.then(loadTickerLists)
 		.then(loadMorningstarData)
 		.then(() => {
-			console.log('finished entire process.');
+			console.log('Morningstar data collection complete.');
 		});
 	/* initializeDatabase()
 		.then(loadTickerLists)
