@@ -161,7 +161,7 @@ TickerListLoader.prototype.insertTickers = function() {
 	for (var i=0; i<this.tickerList.length; i++) {
 		stmt.run(this.tickerList[i]);
 	}
-	console.log(stmt);
+	console.log('Running SQL ', stmt, '.');
 	stmt.finalize(() => {
 		db.close();
 		this.tickerList = [];
@@ -209,12 +209,12 @@ TickerListLoader.prototype.getNextExchange = function() {
 	var nextExchange = this.exchanges.shift();
 	if (nextExchange === undefined) {
 		console.log(`Finished loading ${this.tickerCount} tickers for ${this.count} exchanges.`);
-		console.log('Calling resolver for TickerListLoader.');
+		console.log('Calling promise resolver for TickerListLoader.');
 		this.resolver();
 		return;
 	}
 
-	console.log('--------------------');
+	console.log('------------------------');
 	console.log(`Loading data for exchange ${nextExchange}.`);
 	if (this.count === 0) {
 		http.get(NASDAQ_TICKERS_URL + nextExchange, this.handleNasdaqResponse.bind(this));
@@ -254,23 +254,23 @@ function initializeDatabase() {
 
 function loadTickerLists() {
 	return new Promise((resolve, reject) => {
-		var tickerLoader = new TickerListLoader(['amex', 'nasdaq'], resolve);
+		var tickerLoader = new TickerListLoader(['amex'], resolve);
 		tickerLoader.getNextExchange();
 	});
 }
 
 function main(args) {
-	/* initializeDatabase()
+	initializeDatabase()
 		.then(loadTickerLists)
 		.then(loadMorningstarData)
 		.then(() => {
-			console.log('Finished loading morningstar data.');
-		}); */
-	initializeDatabase()
+			console.log('finished entire process.');
+		});
+	/* initializeDatabase()
 		.then(loadTickerLists)
 		.then(() => {
 			console.log('Finished loading ticker lists. Check db.');
-		});
+		}); */
 	//initializeDatabase().then(() => { console.log('done')});
 }
 
