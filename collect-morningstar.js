@@ -2,8 +2,10 @@ const http = require('http');
 const htmlparser = require('htmlparser2');
 const sqlite3 = require('sqlite3').verbose();
 
-const MORNINGSTAR_BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html?&t='
-const NASDAQ_TICKERS_URL = 'http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&render=download&exchange=';
+const MORNINGSTAR_BASE_URL = 'http://financials.morningstar.com/ajax/' +
+    'ReportProcess4HtmlAjax.html?&t=';
+const NASDAQ_TICKERS_URL = 'http://www.nasdaq.com/screening/' +
+    'companies-by-name.aspx?letter=0&render=download&exchange=';
 const THROTTLE_DELAY = 1500;
 const YEARS = ['Y_1', 'Y_2', 'Y_3', 'Y_4', 'Y_5', 'Y_6'];
 const EXCHANGES = ['nasdaq', 'nyse', 'amex'];
@@ -26,7 +28,8 @@ ResultParser.prototype.onopentag = function(name, attrs) {
         if (attrs.class === 'year' && YEARS.indexOf(attrs.id) !== -1) {
             this.currentYear = attrs.id;
         }
-        if (attrs.class === 'pos' && YEARS.indexOf(attrs.id) !== -1 && attrs.rawvalue !== undefined &&
+        if (attrs.class === 'pos' && YEARS.indexOf(attrs.id) !== -1 &&
+            attrs.rawvalue !== undefined &&
             attrs.style === 'overflow:hidden;white-space: nowrap;') {
             if (this.yearIndex < 6) {
                 this.revenueByYear[attrs.id] = attrs.rawvalue;
@@ -69,26 +72,28 @@ MorningstarCollector.prototype.insertResultData = function(years, revenueByYear)
         for (var yearIndex in revenueByYear) {
             revenue_stmt.run(this.currentTicker, yearIndex, revenueByYear[yearIndex]);
         }
-		revenue_stmt.finalize(() => {
-			db.run('COMMIT');
-			db.close();
-			var endTime = process.hrtime();
-			var insertTime = (endTime[0] - startTime[0]) * 1000 + (endTime[1] - startTime[1]) / 1e6;
-			console.log('Results insertion complete for %s in %f ms.', this.currentTicker, insertTime);
-			this.getNextTicker();
-		});
-	});
+        revenue_stmt.finalize(() => {
+            db.run('COMMIT');
+            db.close();
+            var endTime = process.hrtime();
+            var insertTime = (endTime[0] - startTime[0]) * 1000 +
+                (endTime[1] - startTime[1]) / 1e6;
+            console.log('Results insertion complete for %s in %f ms.',
+                this.currentTicker, insertTime);
+            this.getNextTicker();
+        });
+    });
 };
 
 MorningstarCollector.prototype.processResult = function(result) {
-	console.log('Parsing html result.');
-	var rp = new ResultParser();
-	rp.parser.write(result);
-	rp.parser.end();
-	console.log('Finished parsing html.');
-	console.log('Years: %s', JSON.stringify(rp.years));
-	console.log('Revenue: %s', JSON.stringify(rp.revenueByYear));
-	this.insertResultData(rp.years, rp.revenueByYear);
+    console.log('Parsing html result.');
+    var rp = new ResultParser();
+    rp.parser.write(result);
+    rp.parser.end();
+    console.log('Finished parsing html.');
+    console.log('Years: %s', JSON.stringify(rp.years));
+    console.log('Revenue: %s', JSON.stringify(rp.revenueByYear));
+    this.insertResultData(rp.years, rp.revenueByYear);
 };
 
 MorningstarCollector.prototype.handleResponseEnd = function() {
