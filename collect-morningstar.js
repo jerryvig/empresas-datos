@@ -262,7 +262,7 @@ TickerListLoader.prototype.getNextExchange = function() {
 };
 
 function initializeDatabase() {
-	var startTime = Date.now();
+	var startTime = process.hrtime();
 	var ddl_statments = [
 		'DROP TABLE IF EXISTS years',
 		'DROP TABLE IF EXISTS revenue',
@@ -280,9 +280,9 @@ function initializeDatabase() {
 			if (nextStmt === undefined) {
 				db.run('COMMIT');
 				db.close();
-				var endTime = Date.now();
-				console.log('Finished executing schema drop and creation statements in %fs.',
-					(endTime - startTime)/1000);
+				var endTime = process.hrtime();
+				var diff = (endTime[0] - startTime[0])*1000 + (endTime[1] - startTime[1])/1e6;
+				console.log('Finished executing schema drop and creation statements in %f ms.', diff);
 				resolve();
 				return;
 			}
