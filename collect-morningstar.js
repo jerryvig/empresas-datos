@@ -292,7 +292,7 @@ function initializeDatabase() {
 	return new Promise((resolve, reject) => {
 		function runNextStatment() {
 			var nextStmt = ddl_statments.shift();
-			if (nextStmt === unefined) {
+			if (nextStmt === undefined) {
 				db.run('COMMIT');
 				db.close();
 				var endTime = process.hrtime();
