@@ -1,7 +1,6 @@
 const http = require('http');
 const htmlparser = require('htmlparser2');
 const sqlite3 = require('sqlite3').verbose();
-const util = require('util');
 
 const MORNINGSTAR_BASE_URL = 'http://financials.morningstar.com/ajax/ReportProcess4HtmlAjax.html?&t='
 const NASDAQ_TICKERS_URL = 'http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&render=download&exchange='
@@ -163,18 +162,27 @@ TickerListLoader.prototype.handleResponseEnd = function(rawData) {
 		}
 	}
 
-	if (this.exchanges.length > 0) {
-		setTimeout(this.getNextExchange.bind(this), THROTTLE_DELAY);
-	} else {
-		this.getNextExchange();
+	this.getNextExchange();
+};
+
+TickerListLoader.prototype.handleNasdaqResponse = function(response) {
+	if (response.statusCode !== 200) {
+		console.log(`Error: Nasdaq server responded with status code ${response.statusCode}.`);
+		response.resume();
+		return;
 	}
+
+	response.on('data', this.handleResponseData.bind(this));
+	response.on('end', this.handleResponseEnd.bind(this));
 };
 
 TickerListLoader.prototype.getNextExchange = function() {
 	if (this.count === 0) {
 		console.log(`Loading ticker lists from exchanges ${this.exchanges.join(', ')}.`);
+		http.get(NASDAQ_TICKERS_URL + nextExchange, this.handleNasdaqResponse.bind(this));
+		this.count++;
+		return;
 	}
-	this.count++;
 
 	var nextExchange = this.exchanges.shift();
 	if (nextExchange === undefined) {
@@ -184,16 +192,11 @@ TickerListLoader.prototype.getNextExchange = function() {
 		return;
 	}
 
-	http.get(NASDAQ_TICKERS_URL + nextExchange, (response) => {
-		if (response.statusCode !== 200) {
-			console.log(`Error: Nasdaq server responded with status code ${response.statusCode}.`);
-			response.resume();
-			return;
-		}
-
-		response.on('data', this.handleResponseData.bind(this));
-		response.on('end', this.handleResponseEnd.bind(this));
-	});
+	console.log(`Loading data for exchange ${nextExchange}.`);
+	setTimeout(() => {
+		http.get(NASDAQ_TICKERS_URL + nextExchange, this.handleNasdaqResponse.bind(this));
+	}, THROTTLE_DELAY);
+	this.count++;
 };
 
 function initializeDatabase() {
@@ -222,18 +225,21 @@ function initializeDatabase() {
 
 function loadTickerLists() {
 	return new Promise((resolve, reject) => {
-		var tickerLoader = new TickerListLoader(['amex'], resolve);
+		var tickerLoader = new TickerListLoader(['amex', 'nasdaq'], resolve);
 		tickerLoader.getNextExchange();
 	});
 }
 
 function main(args) {
-	initializeDatabase()
+	/* initializeDatabase()
 		.then(loadTickerLists)
 		.then(loadMorningstarData)
 		.then(() => {
 			console.log('Finished loading morningstar data.');
-		});
+		}); */
+	loadTickerLists().then(() => {
+		console.log('Finished loading ticker lists.');
+	});
 }
 
 const args = process.argv;
