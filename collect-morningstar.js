@@ -318,7 +318,7 @@ function initializeDatabase() {
 
 function loadTickerLists() {
     return new Promise((resolve, reject) => {
-        var tickerLoader = new TickerListLoader(['amex'], resolve);
+        var tickerLoader = new TickerListLoader(['nasdaq'], resolve);
         tickerLoader.getNextExchange();
     });
 }
