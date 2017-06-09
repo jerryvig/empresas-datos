@@ -309,20 +309,20 @@ function initializeDatabase() {
 }
 
 function loadTickerLists() {
-	return new Promise((resolve, reject) => {
-		var tickerLoader = new TickerListLoader(['amex'], resolve);
-		tickerLoader.getNextExchange();
-	});
+    return new Promise((resolve, reject) => {
+        var tickerLoader = new TickerListLoader(['amex'], resolve);
+        tickerLoader.getNextExchange();
+    });
 }
 
 function main(args) {
-	var startTime = Date.now();
-	initializeDatabase()
-		.then(loadTickerLists)
-		.then(loadMorningstarData)
-		.then(() => {
-			console.log('Morningstar data collection completed in %fs.', (endTime - startTime)/1000);
-		});
+    var startTime = Date.now();
+    initializeDatabase()
+        .then(loadTickerLists)
+        .then(loadMorningstarData)
+        .then(() => {
+            console.log('Morningstar data collection completed in %fs.', (endTime - startTime)/1000);
+        });
 	/* initializeDatabase()
 		.then(loadTickerLists)
 		.then(() => {
