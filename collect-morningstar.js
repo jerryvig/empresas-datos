@@ -99,19 +99,19 @@ MorningstarCollector.prototype.processResult = function(result) {
 };
 
 MorningstarCollector.prototype.handleResponseEnd = function() {
-	console.log('Processing response end event for ticker %s.', this.currentTicker);
-	try {
-		var parsedData = JSON.parse(this.rawData);
-		if (parsedData.result !== undefined) {
-			this.processResult(parsedData.result);
-		} else {
-			console.log(`No "result" property found in returned JSON for ticker ${nextTicker}. Cannot process data.`);
-			this.getNextTicker();
-		}
-	} catch (error) {
-		console.log(`Error thrown when parsing JSON: ${error.message}.`);
-		this.getNextTicker();
-	}
+    console.log('Processing response end event for ticker %s.', this.currentTicker);
+    try {
+        var parsedData = JSON.parse(this.rawData);
+        if (parsedData.result !== undefined) {
+            this.processResult(parsedData.result);
+        } else {
+            console.log(`No "result" property found in returned JSON for ticker ${nextTicker}. Cannot process data.`);
+            this.getNextTicker();
+        }
+    } catch (error) {
+        console.log(`Error thrown when parsing JSON: ${error.message}.`);
+        this.getNextTicker();
+    }
 };
 
 MorningstarCollector.prototype.handleResponseData = function(chunk) {
